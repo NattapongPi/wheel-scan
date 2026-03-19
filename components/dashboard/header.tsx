@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Asset, SPOT_PRICES } from '@/lib/mock-data'
 import { cn } from '@/lib/utils'
@@ -13,7 +14,12 @@ interface HeaderProps {
 }
 
 export function Header({ asset, onAssetChange, lastRefresh, onRefresh, isRefreshing }: HeaderProps) {
+  const [mounted, setMounted] = useState(false)
   const spotPrice = SPOT_PRICES[asset]
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const formatPrice = (price: number) =>
     price.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
@@ -67,7 +73,7 @@ export function Header({ asset, onAssetChange, lastRefresh, onRefresh, isRefresh
       {/* Right side */}
       <div className="flex items-center gap-4">
         <span className="text-xs text-muted-foreground font-mono hidden sm:block">
-          Updated {formatTime(lastRefresh)}
+          Updated {mounted ? formatTime(lastRefresh) : '--:--:--'}
         </span>
         <span className="text-xs text-muted-foreground hidden sm:block">Auto 60s</span>
         <button

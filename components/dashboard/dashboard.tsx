@@ -25,8 +25,15 @@ export function Dashboard() {
   const [otmTarget, setOtmTarget] = useState(10)
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS)
   const [selectedExchanges, setSelectedExchanges] = useState<Exchange[]>(ALL_EXCHANGES)
-  const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  // Initialize lastRefresh only on client to avoid hydration mismatch
+  useEffect(() => {
+    if (lastRefresh === null) {
+      setLastRefresh(new Date())
+    }
+  }, [lastRefresh])
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true)
@@ -88,7 +95,7 @@ export function Dashboard() {
       <Header
         asset={asset}
         onAssetChange={setAsset}
-        lastRefresh={lastRefresh}
+        lastRefresh={lastRefresh ?? new Date(0)}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
       />
