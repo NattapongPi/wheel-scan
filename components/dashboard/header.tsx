@@ -72,9 +72,16 @@ export function Header({ asset, onAssetChange, lastRefresh, onRefresh, isRefresh
 
       {/* Right side */}
       <div className="flex items-center gap-4">
-        <span className="text-xs text-muted-foreground font-mono hidden sm:block">
-          Updated {mounted ? formatTime(lastRefresh) : '--:--:--'}
-        </span>
+        {mounted && (
+          <span className="text-xs text-muted-foreground font-mono hidden sm:block">
+            Updated {formatTime(lastRefresh)}
+          </span>
+        )}
+        {!mounted && (
+          <span className="text-xs text-muted-foreground font-mono hidden sm:block">
+            Updated --:--:--
+          </span>
+        )}
         <span className="text-xs text-muted-foreground hidden sm:block">Auto 60s</span>
         <button
           onClick={onRefresh}
