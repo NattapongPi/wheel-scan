@@ -1,5 +1,5 @@
 import type { Asset, OptionRow, OptionType } from "@/lib/mock-data";
-import { safeJsonFetch, computeApr, computeOtm, parseDte } from "./utils";
+import { safeJsonFetch, computeApr, computeOtm, parseDte, pMap } from "./utils";
 
 const BASE = "https://www.okx.com";
 
@@ -16,7 +16,18 @@ interface OkxTicker {
 interface OkxOptSummary {
   instId: string;
   markVol: string; // decimal e.g. "0.72"
+  oi?: string;
+  oiCcy?: string;
+  oiUsd?: string;
+}
+
+interface OkxOpenInterest {
+  instId: string;
+  instType: string;
   oi: string;
+  oiCcy: string;
+  oiUsd: string;
+  ts: string;
 }
 
 interface OkxIndexTicker {
@@ -38,6 +49,37 @@ function parseOkxStrike(instr: OkxInstrument): number {
 
   const fallbackStrike = Number.parseFloat(instr.instId.split("-")[3] ?? "");
   return Number.isFinite(fallbackStrike) ? fallbackStrike : NaN;
+}
+
+function parseOkxOpenInterest(
+  row?: Partial<OkxOptSummary> | Partial<OkxOpenInterest>
+): number {
+  if (!row) return 0;
+
+  const oi = Number.parseFloat(row.oi ?? "");
+  if (Number.isFinite(oi) && oi > 0) return oi;
+
+  const oiCcy = Number.parseFloat(row.oiCcy ?? "");
+  if (Number.isFinite(oiCcy) && oiCcy > 0) return oiCcy;
+
+  return 0;
+}
+
+async function fetchOkxOpenInterest(
+  instId: string,
+  uly: string
+): Promise<OkxOpenInterest | null> {
+  const params = new URLSearchParams({
+    instType: "OPTION",
+    uly,
+    instId,
+  });
+
+  const data = await safeJsonFetch<OkxResponse<OkxOpenInterest>>(
+    `${BASE}/api/v5/public/open-interest?${params.toString()}`
+  );
+
+  return data.data[0] ?? null;
 }
 
 export async function fetchOkxSpot(asset: Asset): Promise<number> {
@@ -73,6 +115,16 @@ export async function fetchOkxOptions(
   const tickerMap = new Map<string, OkxTicker>();
   for (const t of tickerData.data) tickerMap.set(t.instId, t);
 
+  const openInterestEntries = await pMap(
+    instrData.data,
+    async (instr) =>
+      [instr.instId, await fetchOkxOpenInterest(instr.instId, uly)] as const,
+    8
+  );
+  const openInterestMap = new Map<string, OkxOpenInterest | null>(
+    openInterestEntries
+  );
+
   const options: OptionRow[] = [];
 
   for (const instr of instrData.data) {
@@ -97,8 +149,10 @@ export async function fetchOkxOptions(
     if (otm < 0) continue;
 
     const summary = summaryMap.get(instr.instId);
+    const openInterest = openInterestMap.get(instr.instId) ?? null;
     const iv = Number.parseFloat(summary?.markVol ?? "");
-    const oi = Number.parseFloat(summary?.oi ?? "");
+    const oi =
+      parseOkxOpenInterest(openInterest) || parseOkxOpenInterest(summary);
 
     options.push({
       id: `okx-${instr.instId}`,
