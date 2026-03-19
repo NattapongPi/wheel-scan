@@ -39,9 +39,9 @@ export function SettingsBar({
   onExchangeToggle,
 }: SettingsBarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-2.5 bg-muted border-b border-border text-sm">
+    <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-x-6 md:gap-y-2 px-3 md:px-5 py-3 md:py-2.5 bg-muted border-b border-border text-sm overflow-x-auto">
       {/* OTM sweet spot slider */}
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="text-muted-foreground text-xs font-medium whitespace-nowrap cursor-help hover:text-foreground transition-colors">
@@ -59,14 +59,14 @@ export function SettingsBar({
           step={0.5}
           value={otmTarget}
           onChange={(e) => onOtmChange(Number(e.target.value))}
-          className="w-28 accent-primary h-1.5 cursor-pointer"
+          className="w-20 md:w-28 accent-primary h-1.5 cursor-pointer"
           aria-label="OTM sweet spot percentage"
         />
-        <span className="font-mono text-primary text-xs w-9">{otmTarget}%</span>
+        <span className="font-mono text-primary text-xs w-9 shrink-0">{otmTarget}%</span>
       </div>
 
       {/* Weight chips */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="text-muted-foreground text-xs font-medium cursor-help hover:text-foreground transition-colors">
@@ -80,15 +80,16 @@ export function SettingsBar({
         {WEIGHT_CONFIG.map(({ key, label, color, description }) => (
           <Tooltip key={key}>
             <TooltipTrigger asChild>
-              <div className={cn('flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-medium cursor-help transition-opacity hover:opacity-80', color)}>
-                <span>{label}</span>
+              <div className={cn('flex items-center gap-0.5 px-1.5 py-0.5 rounded border text-xs font-medium cursor-help transition-opacity hover:opacity-80', color)}>
+                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{label.slice(0, 2)}</span>
                 <input
                   type="number"
                   min={0}
                   max={100}
                   value={weights[key]}
                   onChange={(e) => onWeightChange(key, Number(e.target.value))}
-                  className="w-8 bg-transparent text-right font-mono outline-none"
+                  className="w-6 md:w-8 bg-transparent text-right font-mono outline-none text-xs"
                   aria-label={`${label} weight percentage`}
                 />
                 <span className="opacity-70">%</span>
@@ -102,7 +103,7 @@ export function SettingsBar({
       </div>
 
       {/* Exchange filter */}
-      <div className="flex items-center gap-2 flex-wrap ml-auto">
+      <div className="flex items-center gap-1.5 md:gap-2 flex-wrap md:ml-auto">
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="text-muted-foreground text-xs font-medium cursor-help hover:text-foreground transition-colors">
@@ -121,7 +122,7 @@ export function SettingsBar({
                 <button
                   onClick={() => onExchangeToggle(ex)}
                   className={cn(
-                    'px-2 py-0.5 rounded border text-xs font-medium transition-colors cursor-help',
+                    'px-2 py-0.5 rounded border text-xs font-medium transition-colors cursor-help whitespace-nowrap',
                     active
                       ? 'bg-primary/15 text-primary border-primary/40 hover:bg-primary/20'
                       : 'bg-transparent text-muted-foreground border-border hover:border-muted-foreground'
