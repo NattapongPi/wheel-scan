@@ -26,9 +26,18 @@ interface OkxIndexTicker {
 
 interface OkxInstrument {
   instId: string;
-  strike: string;
+  strike?: string;
+  stk?: string;
   optType: "C" | "P";
   expTime: string; // unix ms as string
+}
+
+function parseOkxStrike(instr: OkxInstrument): number {
+  const directStrike = Number.parseFloat(instr.stk ?? instr.strike ?? "");
+  if (Number.isFinite(directStrike)) return directStrike;
+
+  const fallbackStrike = Number.parseFloat(instr.instId.split("-")[3] ?? "");
+  return Number.isFinite(fallbackStrike) ? fallbackStrike : NaN;
 }
 
 export async function fetchOkxSpot(asset: Asset): Promise<number> {
@@ -68,14 +77,15 @@ export async function fetchOkxOptions(
 
   for (const instr of instrData.data) {
     const ticker = tickerMap.get(instr.instId);
-    const summary = summaryMap.get(instr.instId);
-    if (!ticker || !summary) continue;
+    if (!ticker) continue;
 
     const bidInUnderlying = parseFloat(ticker.bidPx);
-    if (!bidInUnderlying || bidInUnderlying <= 0) continue;
+    if (!Number.isFinite(bidInUnderlying) || bidInUnderlying <= 0) continue;
 
     const bidUsd = bidInUnderlying * spotPrice;
-    const strike = parseFloat(instr.strike);
+    const strike = parseOkxStrike(instr);
+    if (!Number.isFinite(strike) || strike <= 0) continue;
+
     const type: OptionType = instr.optType === "P" ? "PUT" : "CALL";
     const expiryMs = parseInt(instr.expTime);
     const dte = parseDte(expiryMs);
@@ -86,7 +96,9 @@ export async function fetchOkxOptions(
     const otm = computeOtm(spotPrice, strike, type);
     if (otm < 0) continue;
 
-    const iv = parseFloat(summary.markVol) * 100;
+    const summary = summaryMap.get(instr.instId);
+    const iv = Number.parseFloat(summary?.markVol ?? "");
+    const oi = Number.parseFloat(summary?.oi ?? "");
 
     options.push({
       id: `okx-${instr.instId}`,
@@ -99,8 +111,8 @@ export async function fetchOkxOptions(
       dte,
       apr: computeApr(bidUsd, strike, dte),
       otm,
-      iv: Math.round(iv * 10) / 10,
-      oi: Math.round(parseFloat(summary.oi) || 0),
+      iv: Number.isFinite(iv) ? Math.round(iv * 1000) / 10 : 0,
+      oi: Number.isFinite(oi) ? Math.round(oi) : 0,
       score: 0,
     });
   }

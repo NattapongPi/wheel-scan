@@ -113,7 +113,7 @@ export function Dashboard() {
   const topPicks = sortedAll.slice(0, 3);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background">
+    <div className="flex flex-col min-h-screen md:h-screen overflow-x-hidden md:overflow-hidden bg-background">
       <Header
         asset={asset}
         onAssetChange={setAsset}
@@ -132,7 +132,7 @@ export function Dashboard() {
         selectedExchanges={selectedExchanges}
         onExchangeToggle={handleExchangeToggle}
       />
-      <main className="flex flex-col flex-1 min-h-0 overflow-auto">
+      <main className="flex flex-col flex-1 min-h-0 overflow-visible md:overflow-auto pb-6 md:pb-0">
         {isLoading ? (
           <div className="flex items-center justify-center flex-1 text-muted-foreground text-sm">
             Loading live options data…

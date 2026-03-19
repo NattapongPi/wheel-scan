@@ -91,7 +91,7 @@ export function OptionsTable({
 
   return (
     <section
-      className="flex flex-col flex-1 min-h-0 px-5 pb-5"
+      className="flex flex-col flex-1 min-h-0 px-5 pb-6 md:pb-5"
       aria-label="Options table"
     >
       {/* Tabs */}
@@ -116,7 +116,7 @@ export function OptionsTable({
       </div>
 
       {/* Table wrapper */}
-      <div className="overflow-auto flex-1 border border-t-0 border-border rounded-b-lg">
+      <div className="overflow-x-auto overflow-y-visible md:overflow-auto flex-1 border border-t-0 border-border rounded-b-lg">
         <table className="w-full text-sm border-collapse min-w-[900px]">
           <thead>
             <tr className="bg-[#1c2128] sticky top-0 z-10">
