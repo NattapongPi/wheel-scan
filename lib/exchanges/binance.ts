@@ -14,6 +14,74 @@ interface BinanceIndexPrice {
   indexPrice: string;
 }
 
+interface BinanceMark {
+  symbol: string;
+  markIV: string;
+}
+
+interface BinanceOpenInterest {
+  symbol: string;
+  sumOpenInterest: string;
+  sumOpenInterestUsd: string;
+  timestamp: string;
+}
+
+interface ParsedBinanceOption {
+  symbol: string;
+  strike: number;
+  type: OptionType;
+  expiryDate: string;
+  dte: number;
+  bidUsd: number;
+  otm: number;
+}
+
+async function fetchBinanceMarkMap(): Promise<Map<string, number>> {
+  const data = await safeJsonFetch<BinanceMark[]>(`${BASE}/eapi/v1/mark`);
+  const markMap = new Map<string, number>();
+
+  for (const row of data) {
+    const markIv = parseFloat(row.markIV);
+    if (Number.isFinite(markIv)) {
+      markMap.set(row.symbol, Math.round(markIv * 1000) / 10);
+    }
+  }
+
+  return markMap;
+}
+
+async function fetchBinanceOpenInterestMap(
+  asset: Asset,
+  expirationDate: string
+): Promise<Map<string, number>> {
+  const attempts = [
+    new URLSearchParams({ underlyingAsset: asset, expirationDate }),
+    new URLSearchParams({ underlying: asset, expirationDate }),
+  ];
+
+  for (const params of attempts) {
+    try {
+      const data = await safeJsonFetch<BinanceOpenInterest[]>(
+        `${BASE}/eapi/v1/openInterest?${params.toString()}`
+      );
+
+      const oiMap = new Map<string, number>();
+      for (const row of data) {
+        const openInterest = parseFloat(row.sumOpenInterest);
+        if (Number.isFinite(openInterest)) {
+          oiMap.set(row.symbol, Math.round(openInterest * 100) / 100);
+        }
+      }
+
+      return oiMap;
+    } catch {
+      // Try the next parameter shape.
+    }
+  }
+
+  return new Map();
+}
+
 export async function fetchBinanceSpot(asset: Asset): Promise<number> {
   const underlying = asset === "BTC" ? "BTCUSDT" : "ETHUSDT";
   const data = await safeJsonFetch<BinanceIndexPrice>(
@@ -34,7 +102,8 @@ export async function fetchBinanceOptions(
     ),
   ]);
 
-  const options: OptionRow[] = [];
+  const parsed: ParsedBinanceOption[] = [];
+  const expirations = new Set<string>();
 
   for (const t of tickers) {
     const bid = parseFloat(t.bidPrice);
@@ -49,10 +118,10 @@ export async function fetchBinanceOptions(
     if (!strike) continue;
 
     // Parse expiry from YYMMDD
-    const expiryStr = parts[1];
-    const year = 2000 + parseInt(expiryStr.slice(0, 2));
-    const month = parseInt(expiryStr.slice(2, 4)) - 1;
-    const day = parseInt(expiryStr.slice(4, 6));
+    const expiryDate = parts[1];
+    const year = 2000 + parseInt(expiryDate.slice(0, 2));
+    const month = parseInt(expiryDate.slice(2, 4)) - 1;
+    const day = parseInt(expiryDate.slice(4, 6));
     const expiryMs = new Date(Date.UTC(year, month, day, 8, 0, 0)).getTime();
     const dte = parseDte(expiryMs);
 
@@ -62,21 +131,59 @@ export async function fetchBinanceOptions(
     const otm = computeOtm(spotPrice, strike, type);
     if (otm < 0) continue;
 
-    const iv = parseFloat(t.markIV) * 100;
+    expirations.add(expiryDate);
+    parsed.push({
+      symbol: t.symbol,
+      strike,
+      type,
+      expiryDate,
+      dte,
+      bidUsd: Math.round(bid * 100) / 100,
+      otm,
+    });
+  }
+
+  const [markMap, oiMaps] = await Promise.all([
+    fetchBinanceMarkMap(),
+    Promise.all(
+      [...expirations].map((expirationDate) =>
+        fetchBinanceOpenInterestMap(asset, expirationDate)
+      )
+    ),
+  ]);
+
+  const oiMap = new Map<string, number>();
+  for (const map of oiMaps) {
+    for (const [symbol, openInterest] of map) {
+      oiMap.set(symbol, openInterest);
+    }
+  }
+
+  const options: OptionRow[] = [];
+
+  for (const option of parsed) {
+    const markIv = markMap.get(option.symbol);
+    const fallbackIv = Number.isFinite(markIv)
+      ? markIv
+      : Math.round(
+          parseFloat(
+            tickers.find((t) => t.symbol === option.symbol)?.markIV || ""
+          ) * 1000
+        ) / 10;
 
     options.push({
-      id: `binance-${t.symbol}`,
+      id: `binance-${option.symbol}`,
       exchange: "Binance",
-      instrument: t.symbol,
+      instrument: option.symbol,
       asset,
-      type,
-      strike,
-      bid: Math.round(bid * 100) / 100,
-      dte,
-      apr: computeApr(bid, strike, dte),
-      otm,
-      iv: Math.round(iv * 10) / 10,
-      oi: Math.round(parseFloat(t.openInterest) || 0),
+      type: option.type,
+      strike: option.strike,
+      bid: option.bidUsd,
+      dte: option.dte,
+      apr: computeApr(option.bidUsd, option.strike, option.dte),
+      otm: option.otm,
+      iv: Number.isFinite(fallbackIv) ? fallbackIv : 0,
+      oi: oiMap.get(option.symbol) ?? 0,
       score: 0,
     });
   }

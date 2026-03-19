@@ -17,6 +17,16 @@ interface OptionsTableProps {
   onTypeChange: (t: OptionType) => void;
 }
 
+function formatPercent(val: number) {
+  return typeof val === "number" && Number.isFinite(val) ? `${val}%` : "—";
+}
+
+function formatCount(val: number) {
+  return typeof val === "number" && Number.isFinite(val)
+    ? val.toLocaleString()
+    : "—";
+}
+
 const COL_HEADERS: {
   key: SortKey | null;
   label: string;
@@ -230,12 +240,12 @@ function TableRow({ row, rank }: { row: OptionRow; rank: number }) {
 
       {/* IV */}
       <td className="px-3 py-2.5 text-right font-mono text-xs text-purple-400">
-        {row.iv}%
+        {formatPercent(row.iv)}
       </td>
 
       {/* OI */}
       <td className="px-3 py-2.5 text-right font-mono text-xs text-amber-400">
-        {(row.oi ?? 0).toLocaleString()}
+        {formatCount(row.oi)}
       </td>
 
       {/* Score */}
