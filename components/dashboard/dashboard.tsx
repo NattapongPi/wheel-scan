@@ -82,7 +82,7 @@ export function Dashboard() {
         ivScore * weights.iv +
         oiScore * weights.oi +
         dteScore * weights.dte) /
-        total
+      total
     )
     return { ...row, score }
   })

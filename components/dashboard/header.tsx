@@ -14,18 +14,10 @@ interface HeaderProps {
 }
 
 export function Header({ asset, onAssetChange, lastRefresh, onRefresh, isRefreshing }: HeaderProps) {
-  const [mounted, setMounted] = useState(false)
   const spotPrice = SPOT_PRICES[asset]
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   const formatPrice = (price: number) =>
     price.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-
-  const formatTime = (date: Date) =>
-    date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
   return (
     <header className="flex items-center justify-between px-5 h-14 bg-card border-b border-border shrink-0">
@@ -72,17 +64,7 @@ export function Header({ asset, onAssetChange, lastRefresh, onRefresh, isRefresh
 
       {/* Right side */}
       <div className="flex items-center gap-4">
-        {mounted && (
-          <span className="text-xs text-muted-foreground font-mono hidden sm:block">
-            Updated {formatTime(lastRefresh)}
-          </span>
-        )}
-        {!mounted && (
-          <span className="text-xs text-muted-foreground font-mono hidden sm:block">
-            Updated --:--:--
-          </span>
-        )}
-        <span className="text-xs text-muted-foreground hidden sm:block">Auto 60s</span>
+        <span className="text-xs text-muted-foreground hidden sm:block">Auto refresh 60s</span>
         <button
           onClick={onRefresh}
           disabled={isRefreshing}
