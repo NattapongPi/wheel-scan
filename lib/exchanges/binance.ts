@@ -7,7 +7,7 @@ interface BinanceTicker {
   symbol: string; // e.g. "BTC-250328-80000-P"
   bidPrice: string;
   markIV: string; // 0-1 scale
-  openInterest: string;
+  // Note: openInterest is NOT returned by /eapi/v1/ticker — field does not exist in response
 }
 
 interface BinanceIndexPrice {
@@ -55,8 +55,7 @@ async function fetchBinanceOpenInterestMap(
   expirationDate: string
 ): Promise<Map<string, number>> {
   const attempts = [
-    new URLSearchParams({ underlyingAsset: asset, expirationDate }),
-    new URLSearchParams({ underlying: asset, expirationDate }),
+    new URLSearchParams({ underlyingAsset: asset, expiration: expirationDate }),
   ];
 
   for (const params of attempts) {
@@ -67,7 +66,7 @@ async function fetchBinanceOpenInterestMap(
 
       const oiMap = new Map<string, number>();
       for (const row of data) {
-        const openInterest = parseFloat(row.sumOpenInterest);
+        const openInterest = parseFloat(row.sumOpenInterestUsd);
         if (Number.isFinite(openInterest)) {
           oiMap.set(row.symbol, Math.round(openInterest * 100) / 100);
         }
@@ -162,7 +161,10 @@ export async function fetchBinanceOptions(
   const options: OptionRow[] = [];
 
   for (const option of parsed) {
-    const markIv = markMap.get(option.symbol);
+    const oi = oiMap.get(option.symbol) ?? 0;
+    if (oi <= 0) continue;
+
+    const markIv = markMap.get(option.symbol) ?? NaN;
     const fallbackIv = Number.isFinite(markIv)
       ? markIv
       : Math.round(
@@ -183,7 +185,7 @@ export async function fetchBinanceOptions(
       apr: computeApr(option.bidUsd, option.strike, option.dte),
       otm: option.otm,
       iv: Number.isFinite(fallbackIv) ? fallbackIv : 0,
-      oi: oiMap.get(option.symbol) ?? 0,
+      oi,
       score: 0,
     });
   }

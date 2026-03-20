@@ -34,7 +34,7 @@ function formatUSD(val: number) {
 
 function formatCount(val: number) {
   return typeof val === "number" && Number.isFinite(val)
-    ? val.toLocaleString()
+    ? "$" + Math.round(val).toLocaleString()
     : "—";
 }
 

@@ -23,7 +23,7 @@ function formatPercent(val: number) {
 
 function formatCount(val: number) {
   return typeof val === "number" && Number.isFinite(val)
-    ? val.toLocaleString()
+    ? "$" + Math.round(val).toLocaleString()
     : "—";
 }
 
@@ -35,7 +35,7 @@ const COL_HEADERS: {
 }[] = [
   { key: null, label: "#", align: "text-center" },
   { key: null, label: "Exchange", align: "text-left" },
-  { key: null, label: "Instrument", align: "text-left" },
+  { key: null, label: "Expiry", align: "text-left" },
   { key: "strike", label: "Strike", align: "text-right" },
   { key: "bid", label: "Bid", align: "text-right" },
   { key: "dte", label: "DTE", align: "text-right" },
@@ -54,7 +54,7 @@ const COL_HEADERS: {
   { key: "iv", label: "IV %", align: "text-right", colored: "text-purple-400" },
   {
     key: "oi",
-    label: "Open Int.",
+    label: "Open Int. (USD)",
     align: "text-right",
     colored: "text-amber-400",
   },
@@ -206,10 +206,10 @@ function TableRow({ row, rank }: { row: OptionRow; rank: number }) {
         </span>
       </td>
 
-      {/* Instrument */}
+      {/* Expiry */}
       <td className="px-3 py-2.5">
         <span className="font-mono text-xs text-foreground">
-          {row.instrument}
+          {new Date(Date.now() + row.dte * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
         </span>
       </td>
 

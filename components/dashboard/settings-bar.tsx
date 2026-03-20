@@ -24,6 +24,7 @@ const EXCHANGE_DESCRIPTIONS: { [key in Exchange]: string } = {
 interface SettingsBarProps {
   otmTarget: number
   onOtmChange: (val: number) => void
+  onOtmCommit: (val: number) => void
   weights: Weights
   onWeightChange: (key: WeightKey, val: number) => void
   selectedExchanges: Exchange[]
@@ -33,6 +34,7 @@ interface SettingsBarProps {
 export function SettingsBar({
   otmTarget,
   onOtmChange,
+  onOtmCommit,
   weights,
   onWeightChange,
   selectedExchanges,
@@ -59,6 +61,7 @@ export function SettingsBar({
           step={0.5}
           value={otmTarget}
           onChange={(e) => onOtmChange(Number(e.target.value))}
+          onPointerUp={(e) => onOtmCommit(Number((e.target as HTMLInputElement).value))}
           className="w-20 md:w-28 accent-primary h-1.5 cursor-pointer"
           aria-label="OTM sweet spot percentage"
         />

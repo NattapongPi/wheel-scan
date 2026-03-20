@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Asset,
   Exchange,
@@ -22,6 +22,7 @@ export function Dashboard() {
   const [asset, setAsset] = useState<Asset>("BTC");
   const [activeType, setActiveType] = useState<OptionType>("PUT");
   const [otmTarget, setOtmTarget] = useState(10);
+  const [otmTargetCommitted, setOtmTargetCommitted] = useState(10);
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const [selectedExchanges, setSelectedExchanges] =
     useState<Exchange[]>(ALL_EXCHANGES);
@@ -82,13 +83,14 @@ export function Dashboard() {
   }
 
   // Filter by selected exchanges
-  const filtered = options.filter((r) =>
-    selectedExchanges.includes(r.exchange)
+  const filtered = useMemo(
+    () => options.filter((r) => selectedExchanges.includes(r.exchange)),
+    [options, selectedExchanges]
   );
 
   // Score override based on current weights and otm target
-  const scored: OptionRow[] = filtered.map((row) => {
-    const otmDiff = Math.abs(row.otm - otmTarget);
+  const scored = useMemo(() => filtered.map((row) => {
+    const otmDiff = Math.abs(row.otm - otmTargetCommitted);
     const moneynessScore = Math.max(0, 100 - otmDiff * 8);
     const aprScore = Math.min(100, (row.apr / 200) * 100);
     const ivScore = Math.min(100, (row.iv / 80) * 100);
@@ -107,7 +109,7 @@ export function Dashboard() {
         total
     );
     return { ...row, score };
-  });
+  }), [filtered, otmTargetCommitted, weights]);
 
   const sortedAll = [...scored].sort((a, b) => b.score - a.score);
   const topPicks = sortedAll.slice(0, 3);
@@ -127,6 +129,7 @@ export function Dashboard() {
       <SettingsBar
         otmTarget={otmTarget}
         onOtmChange={setOtmTarget}
+        onOtmCommit={setOtmTargetCommitted}
         weights={weights}
         onWeightChange={handleWeightChange}
         selectedExchanges={selectedExchanges}

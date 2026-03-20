@@ -76,6 +76,9 @@ export async function fetchDeribitOptions(
     const otm = computeOtm(spotPrice, instr.strike, type);
     if (otm < 0) continue;
 
+    const oi = Math.round((ticker.open_interest || 0) * spotPrice);
+    if (oi <= 0) continue;
+
     options.push({
       id: `deribit-${instr.instrument_name}`,
       exchange: "Deribit",
@@ -88,7 +91,7 @@ export async function fetchDeribitOptions(
       apr: computeApr(bidUsd, instr.strike, dte),
       otm,
       iv: Math.round(ticker.mark_iv * 10) / 10,
-      oi: Math.round(ticker.open_interest || 0),
+      oi,
       score: 0,
     });
   }

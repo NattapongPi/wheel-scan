@@ -52,15 +52,13 @@ function parseOkxStrike(instr: OkxInstrument): number {
 }
 
 function parseOkxOpenInterest(
-  row?: Partial<OkxOptSummary> | Partial<OkxOpenInterest>
+  row: Partial<OkxOptSummary> | Partial<OkxOpenInterest> | undefined,
+  spotPrice: number
 ): number {
   if (!row) return 0;
 
-  const oi = Number.parseFloat(row.oi ?? "");
-  if (Number.isFinite(oi) && oi > 0) return oi;
-
   const oiCcy = Number.parseFloat(row.oiCcy ?? "");
-  if (Number.isFinite(oiCcy) && oiCcy > 0) return oiCcy;
+  if (Number.isFinite(oiCcy) && oiCcy > 0) return Math.round(oiCcy * spotPrice);
 
   return 0;
 }
@@ -123,6 +121,8 @@ export async function fetchOkxOptions(
   );
   const openInterestMap = new Map<string, OkxOpenInterest | null>(
     openInterestEntries
+      .filter((e): e is PromiseFulfilledResult<readonly [string, OkxOpenInterest | null]> => e.status === "fulfilled")
+      .map((e) => e.value)
   );
 
   const options: OptionRow[] = [];
@@ -152,7 +152,9 @@ export async function fetchOkxOptions(
     const openInterest = openInterestMap.get(instr.instId) ?? null;
     const iv = Number.parseFloat(summary?.markVol ?? "");
     const oi =
-      parseOkxOpenInterest(openInterest) || parseOkxOpenInterest(summary);
+      parseOkxOpenInterest(openInterest ?? undefined, spotPrice) || parseOkxOpenInterest(summary, spotPrice);
+
+    if (oi <= 0) continue;
 
     options.push({
       id: `okx-${instr.instId}`,

@@ -24,7 +24,6 @@ interface BybitSpotTicker {
 
 interface BybitInstrument {
   symbol: string;
-  strikePrice: string;
   optionsType: "Call" | "Put";
   deliveryTime: string; // unix ms as string
 }
@@ -65,7 +64,7 @@ export async function fetchBybitOptions(
     const instr = instrMap.get(t.symbol);
     if (!instr) continue;
 
-    const strike = parseFloat(instr.strikePrice);
+    const strike = parseFloat(t.symbol.split("-")[2]);
     const type: OptionType = instr.optionsType === "Put" ? "PUT" : "CALL";
     const expiryMs = parseInt(instr.deliveryTime);
     const dte = parseDte(expiryMs);
@@ -77,6 +76,9 @@ export async function fetchBybitOptions(
     if (otm < 0) continue;
 
     const iv = parseFloat(t.markIv) * 100;
+    const oi = Math.round((parseFloat(t.openInterest) || 0) * spotPrice);
+    const apr = computeApr(bid, strike, dte);
+
 
     options.push({
       id: `bybit-${t.symbol}`,
@@ -87,10 +89,10 @@ export async function fetchBybitOptions(
       strike,
       bid: Math.round(bid * 100) / 100,
       dte,
-      apr: computeApr(bid, strike, dte),
+      apr,
       otm,
       iv: Math.round(iv * 10) / 10,
-      oi: Math.round(parseFloat(t.openInterest) || 0),
+      oi,
       score: 0,
     });
   }
